@@ -1,3 +1,9 @@
+;; CLICKLABELS
+;; Click points to place numbered MTEXT labels on the tags layer.
+;; Prompts for a label prefix and starting number
+
+
+
 (setq *cl-label-height* 5.0)
 (setq *cl-label-width* 15.2130)
 
