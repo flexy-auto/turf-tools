@@ -71,6 +71,16 @@
   )
 )
 
+(defun _dld-segment-covered-p (seg1 seg2)
+  (and
+    (_dld-colinear-p (car seg1) (cadr seg1) (car seg2) (cadr seg2))
+    (>=
+      (_dld-overlap-length (car seg1) (cadr seg1) (car seg2) (cadr seg2))
+      (- (_dld-len (_dld-vsub (cadr seg1) (car seg1))) *dld-tol*)
+    )
+  )
+)
+
 (defun _dld-lwpoly-segments (ed / segs first prev vtx bul closed)
   (setq segs '()
         first nil
@@ -193,13 +203,33 @@
   found
 )
 
+(defun _dld-all-covered-p (segs1 segs2 / seg1 rest2 found allok)
+  (setq allok T)
+  (while (and segs1 allok)
+    (setq seg1 (car segs1)
+          rest2 segs2
+          found nil)
+    (while (and rest2 (not found))
+      (if (_dld-segment-covered-p seg1 (car rest2))
+        (setq found T)
+      )
+      (setq rest2 (cdr rest2))
+    )
+    (if (not found)
+      (setq allok nil)
+    )
+    (setq segs1 (cdr segs1))
+  )
+  allok
+)
+
 (defun _dld-add-if-missing (ent ss)
   (if (not (ssmemb ent ss))
     (ssadd ent ss)
   )
 )
 
-(defun c:DOUBLELINEDETECTOR ( / ss items left right a b out)
+(defun c:DOUBLELINEDETECTOR ( / ss items left right a b out delSet delAns)
   (prompt "\nSelect linework to check for double lines: ")
   (setq ss (ssget '((0 . "LINE,LWPOLYLINE,POLYLINE"))))
   (cond
@@ -209,6 +239,7 @@
     (T
      (setq items (_dld-build-items ss)
            out (ssadd)
+           delSet (ssadd)
            left items)
      (while left
        (setq a (car left)
@@ -219,6 +250,14 @@
            (progn
              (_dld-add-if-missing (car a) out)
              (_dld-add-if-missing (car b) out)
+             (cond
+               ((_dld-all-covered-p (cdr b) (cdr a))
+                (_dld-add-if-missing (car b) delSet)
+               )
+               ((_dld-all-covered-p (cdr a) (cdr b))
+                (_dld-add-if-missing (car a) delSet)
+               )
+             )
            )
          )
          (setq right (cdr right))
@@ -234,6 +273,27 @@
              (itoa (sslength out))
              " object(s) with overlapping straight linework."
             )
+          )
+         (initget "Yes No")
+         (setq delAns (getkword "\nDelete the additional double lines? [Yes/No] <No>: "))
+         (if (= delAns "Yes")
+           (if (> (sslength delSet) 0)
+             (progn
+               (setq left 0)
+               (while (< left (sslength delSet))
+                 (entdel (ssname delSet left))
+                 (setq left (1+ left))
+               )
+               (prompt
+                 (strcat
+                   "\nDeleted "
+                   (itoa (sslength delSet))
+                   " additional double line object(s)."
+                 )
+               )
+             )
+             (prompt "\nNo clear extra objects could be deleted safely.")
+           )
          )
        )
        (prompt "\nNo overlapping straight linework found.")
