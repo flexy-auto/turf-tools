@@ -2,7 +2,6 @@
 ;; Find overlapping straight linework and highlight the parent objects.
 ;; This command checks LINE, LWPOLYLINE, and POLYLINE objects only.
 ;; Curves are ignored on purpose.
-;; Highlights possible duplicate linework but does not delete anything.
 
 (setq c:CHECKDOUBLES nil)
 
