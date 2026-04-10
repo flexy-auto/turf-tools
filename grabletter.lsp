@@ -110,7 +110,8 @@
 )
 
 (defun _gl-find-best-close-pair (items / sorted outer inner bestPair bestGap)
-  ;; Find the first close nested pair from largest inward.
+  ;; Prefer the largest valid outer border first.
+  ;; Among pairs that share that outer border, prefer the closest gap.
   (setq sorted (_gl-sort-by-area-desc items)
         bestPair nil
         bestGap nil)
@@ -118,7 +119,14 @@
     (setq outer (car sorted))
     (foreach inner (cdr sorted)
       (if (_gl-close-pair-p outer inner)
-        (if (or (null bestGap) (< (_gl-poly-gap outer inner) bestGap))
+        (if (or
+              (null bestPair)
+              (> (car outer) (car (car bestPair)))
+              (and
+                (= (car outer) (car (car bestPair)))
+                (< (_gl-poly-gap outer inner) bestGap)
+              )
+            )
           (progn
             (setq bestGap (_gl-poly-gap outer inner))
             (setq bestPair (list outer inner))
@@ -221,4 +229,3 @@
   )
   (princ)
 )
-
